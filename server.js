@@ -17,6 +17,12 @@ const __dirname = path.dirname(__filename);
 const PORT = process.env.PORT || 3000;
 const UPLOAD_DIR = path.join(__dirname, "uploads");
 
+// Whisper transcription language (e.g. "de", "en"). Use "auto" to let Whisper detect it.
+const WHISPER_LANGUAGE = process.env.WHISPER_LANGUAGE || "de";
+
+// Allowed CORS origin for the browser extension. "*" allows any origin.
+const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || "https://web.whatsapp.com";
+
 // Create the upload folder if it does not exist yet
 fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
@@ -48,7 +54,7 @@ const upload = multer({
 
 // --- Express app ---
 const app = express();
-app.use(cors());
+app.use(cors({ origin: ALLOWED_ORIGIN === "*" ? true : ALLOWED_ORIGIN }));
 app.use(express.json());
 
 // Health check
@@ -90,10 +96,15 @@ app.post("/api/summarize", upload.single("audio"), async (req, res) => {
 
     // 3. Step A: Voice-to-text via Whisper
     const client = getOpenAI();
-    const transcription = await client.audio.transcriptions.create({
+    const transcriptionParams = {
       file: fs.createReadStream(req.file.path),
       model: "whisper-1",
-    });
+    };
+    // Pass a fixed language unless auto-detection is requested
+    if (WHISPER_LANGUAGE && WHISPER_LANGUAGE.toLowerCase() !== "auto") {
+      transcriptionParams.language = WHISPER_LANGUAGE;
+    }
+    const transcription = await client.audio.transcriptions.create(transcriptionParams);
     const originalText = transcription.text;
 
     // 4. Step B: Summary via GPT-4o-mini
@@ -157,4 +168,6 @@ app.listen(PORT, () => {
     );
   }
   console.log(`Apollon backend running at http://localhost:${PORT}`);
+  console.log(`   - Allowed CORS origin: ${ALLOWED_ORIGIN}`);
+  console.log(`   - Whisper language: ${WHISPER_LANGUAGE}`);
 });

@@ -16,8 +16,8 @@ async function send(message: unknown): Promise<SummaryResult | null> {
   const raw = await chrome.runtime.sendMessage(message)
   const res: RelayResponse | undefined = raw
   if (!res) throw new Error("No response from background worker")
-  if (res.ok) return res.result
-  throw new Error(res.error)
+  if (!res.ok) throw new Error("error" in res ? res.error : "Request failed")
+  return res.result
 }
 
 export function getSummary(dataId: string): Promise<SummaryResult | null> {

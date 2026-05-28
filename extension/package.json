@@ -1,0 +1,33 @@
+{
+  "name": "apollon-extension",
+  "displayName": "Apollon — WhatsApp Voice Summaries",
+  "version": "0.1.0",
+  "description": "Fügt in WhatsApp Web neben Sprachnachrichten einen Button zum Transkribieren und Zusammenfassen ein (Apollon-Backend).",
+  "author": "Apollon",
+  "scripts": {
+    "dev": "plasmo dev",
+    "build": "plasmo build",
+    "package": "plasmo package"
+  },
+  "dependencies": {
+    "@wppconnect/wa-js": "4.3.0",
+    "lucide-react": "^0.460.0",
+    "plasmo": "0.90.5",
+    "react": "18.2.0",
+    "react-dom": "18.2.0"
+  },
+  "devDependencies": {
+    "@types/chrome": "0.0.258",
+    "@types/node": "20.11.5",
+    "@types/react": "18.2.48",
+    "@types/react-dom": "18.2.18",
+    "typescript": "5.3.3"
+  },
+  "manifest": {
+    "host_permissions": [
+      "http://192.168.178.29:3001/*",
+      "http://localhost:3001/*",
+      "https://web.whatsapp.com/*"
+    ]
+  }
+}

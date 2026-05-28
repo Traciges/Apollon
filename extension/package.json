@@ -25,8 +25,7 @@
   },
   "manifest": {
     "host_permissions": [
-      "http://192.168.178.29:3001/*",
-      "http://localhost:3001/*",
+      "http://localhost:3000/*",
       "https://web.whatsapp.com/*"
     ]
   }

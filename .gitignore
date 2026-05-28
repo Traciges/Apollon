@@ -4,6 +4,13 @@ node_modules/
 # Temporary upload files
 uploads/
 
+# SQLite database
+data/
+*.sqlite
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+
 # Environment variables / secrets
 .env
 .env.local

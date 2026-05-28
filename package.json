@@ -2,10 +2,10 @@
   "name": "apollon",
   "version": "1.0.0",
   "description": "Backend zum Transkribieren und Zusammenfassen von WhatsApp-Sprachnachrichten (Whisper + GPT-4o-mini)",
-  "main": "server.js",
+  "main": "src/server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node --watch server.js"
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
   },
   "repository": {
     "type": "git",
@@ -20,6 +20,7 @@
   },
   "homepage": "https://github.com/Traciges/Apollon#readme",
   "dependencies": {
+    "better-sqlite3": "^12.10.0",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",

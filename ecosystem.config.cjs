@@ -10,7 +10,7 @@ module.exports = {
   apps: [
     {
       name: "apollon-backend",
-      script: "server.js",
+      script: "src/server.js",
       cwd: __dirname,
       watch: false,
       env: {

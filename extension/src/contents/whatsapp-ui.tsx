@@ -11,42 +11,74 @@ export const config: PlasmoCSConfig = {
   matches: ["https://web.whatsapp.com/*"]
 }
 
-// Candidate selectors for the voice-note play control. WhatsApp changes its
-// markup often and the data-icon name has drifted over versions, so we match
-// any of these inside a [data-id] message container. Anchoring on the icon
-// (not an aria-label) keeps this locale-independent.
+console.log("[Apollon] content script loaded")
+
+// Set to false to silence the diagnostic logging once the selector is verified.
+const DEBUG = true
+
+// Voice notes (PTT) carry a "ptt-status" microphone icon — this reliably marks
+// a voice message and is locale-independent. The actual play control uses
+// "media-play" (shared with video, so not usable on its own) or shows
+// "audio-download" before the media is fetched.
 //
 // VERIFY ON BUILD: open web.whatsapp.com devtools on a voice note and confirm
-// one of these still matches; adjust the list if WA renamed the icon.
-const PLAY_ICON_SELECTORS = [
+// these data-icon names still match; WhatsApp renames them across versions.
+const VOICE_MARKER = 'span[data-icon="ptt-status"]'
+const PLAY_CONTROL_SELECTOR = [
+  'span[data-icon="media-play"]',
+  'span[data-icon="audio-download"]',
   'span[data-icon="audio-play"]',
-  'span[data-icon="ptt-play"]',
-  'span[data-icon="audio-play-pip"]'
+  'span[data-icon="ptt-play"]'
 ].join(",")
 
+function log(...args: unknown[]) {
+  if (DEBUG) console.log("[Apollon]", ...args)
+}
+
 function findPlayButtons(): HTMLElement[] {
-  const icons = Array.from(
-    document.querySelectorAll<HTMLElement>(PLAY_ICON_SELECTORS)
+  const markers = Array.from(
+    document.querySelectorAll<HTMLElement>(VOICE_MARKER)
   )
   const anchors: HTMLElement[] = []
   const seen = new Set<Element>()
-  for (const icon of icons) {
-    const container = icon.closest<HTMLElement>("[data-id]")
+  for (const marker of markers) {
+    const container = marker.closest<HTMLElement>("[data-id]")
     if (!container || seen.has(container)) continue
     seen.add(container)
-    // Anchor to the clickable button wrapping the icon, falling back to the
-    // icon's parent so we always render next to the play control.
+    // Prefer to sit next to the play/download control; fall back to the marker.
+    const control =
+      container.querySelector<HTMLElement>(PLAY_CONTROL_SELECTOR) ?? marker
     const button =
-      icon.closest<HTMLElement>('button, div[role="button"]') ??
-      (icon.parentElement as HTMLElement | null) ??
-      icon
+      control.closest<HTMLElement>('button, div[role="button"]') ??
+      (control.parentElement as HTMLElement | null) ??
+      control
     anchors.push(button)
   }
   return anchors
 }
 
 export const getInlineAnchorList: PlasmoGetInlineAnchorList = async () => {
-  return findPlayButtons().map((element) => ({
+  const buttons = findPlayButtons()
+  if (DEBUG) {
+    if (buttons.length === 0) {
+      // Nothing matched — dump the play/audio-ish icons present so we can see
+      // what WhatsApp actually calls the control now.
+      const iconNames = [
+        ...new Set(
+          Array.from(document.querySelectorAll("[data-icon]"))
+            .map((e) => e.getAttribute("data-icon") || "")
+            .filter((v) => /play|ptt|audio|mic|voice/i.test(v))
+        )
+      ]
+      log(
+        "no play buttons matched. Present play/audio data-icons:",
+        iconNames.length ? iconNames : "(none — open a chat with a voice message)"
+      )
+    } else {
+      log(`matched ${buttons.length} voice message(s)`)
+    }
+  }
+  return buttons.map((element) => ({
     element,
     insertPosition: "afterend"
   }))

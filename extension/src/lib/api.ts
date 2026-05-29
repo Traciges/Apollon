@@ -27,9 +27,16 @@ export function getSummary(dataId: string): Promise<SummaryResult | null> {
 export async function postSummarize(
   dataId: string,
   base64: string,
-  mimetype: string
+  mimetype: string,
+  senderName?: string
 ): Promise<SummaryResult> {
-  const result = await send({ name: "apollon-summarize", dataId, base64, mimetype })
+  const result = await send({
+    name: "apollon-summarize",
+    dataId,
+    base64,
+    mimetype,
+    senderName
+  })
   if (!result) throw new Error("Summarize returned no result")
   return result
 }

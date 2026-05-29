@@ -85,8 +85,9 @@ router.post("/summarize", upload.single("audio"), async (req, res) => {
       });
     }
 
+    const senderName = req.body?.senderName;
     const originalText = await transcribeAudio(req.file.path);
-    const summary = await summarizeText(originalText);
+    const summary = await summarizeText(originalText, senderName);
 
     saveSummary(messageId, originalText, summary);
 

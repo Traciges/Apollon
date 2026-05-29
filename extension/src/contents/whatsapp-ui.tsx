@@ -6,7 +6,7 @@ import type {
 } from "plasmo"
 
 import SummarizeWidget from "~features/SummarizeWidget"
-import { PLAY_CONTROL_SELECTOR, VOICE_MARKER } from "~lib/wa-selectors"
+import { VOICE_MARKER } from "~lib/wa-selectors"
 
 export const config: PlasmoCSConfig = {
   matches: ["https://web.whatsapp.com/*"]
@@ -21,34 +21,45 @@ function log(...args: unknown[]) {
   if (DEBUG) console.log("[Apollon]", ...args)
 }
 
-function findPlayButtons(): HTMLElement[] {
+// Resolve the actual (content-sized) chat bubble for a voice message. The
+// `.message-in` / `.message-out` wrapper spans the full chat width, so we can't
+// anchor to it — the button would land at the far chat edge. Instead we walk up
+// from the voice marker and pick the outermost ancestor that is still clearly
+// narrower than the row: that's the coloured bubble. Its element is stable
+// across playback (WhatsApp only swaps the inner play icon), so anchoring here
+// gives exactly one widget per message.
+function resolveBubble(marker: HTMLElement, row: HTMLElement): HTMLElement {
+  const rowWidth = row.getBoundingClientRect().width
+  let el: HTMLElement | null = marker.parentElement
+  let bubble: HTMLElement | null = null
+  while (el && el !== row) {
+    const w = el.getBoundingClientRect().width
+    if (w > 0 && rowWidth > 0 && w <= rowWidth * 0.92) bubble = el
+    el = el.parentElement
+  }
+  return bubble ?? row
+}
+
+// One anchor per voice message, deduped by the [data-id] row.
+function findVoiceBubbles(): HTMLElement[] {
   const markers = Array.from(
     document.querySelectorAll<HTMLElement>(VOICE_MARKER)
   )
-  const anchors: HTMLElement[] = []
+  const bubbles: HTMLElement[] = []
   const seen = new Set<Element>()
   for (const marker of markers) {
-    const container = marker.closest<HTMLElement>("[data-id]")
-    if (!container || seen.has(container)) continue
-    seen.add(container)
-    // Prefer to sit next to the play/download control; fall back to the marker.
-    const control =
-      container.querySelector<HTMLElement>(PLAY_CONTROL_SELECTOR) ?? marker
-    const button =
-      control.closest<HTMLElement>('button, div[role="button"]') ??
-      (control.parentElement as HTMLElement | null) ??
-      control
-    anchors.push(button)
+    const row = marker.closest<HTMLElement>("[data-id]")
+    if (!row || seen.has(row)) continue
+    seen.add(row)
+    bubbles.push(resolveBubble(marker, row))
   }
-  return anchors
+  return bubbles
 }
 
 export const getInlineAnchorList: PlasmoGetInlineAnchorList = async () => {
-  const buttons = findPlayButtons()
+  const bubbles = findVoiceBubbles()
   if (DEBUG) {
-    if (buttons.length === 0) {
-      // Nothing matched — dump the play/audio-ish icons present so we can see
-      // what WhatsApp actually calls the control now.
+    if (bubbles.length === 0) {
       const iconNames = [
         ...new Set(
           Array.from(document.querySelectorAll("[data-icon]"))
@@ -57,31 +68,43 @@ export const getInlineAnchorList: PlasmoGetInlineAnchorList = async () => {
         )
       ]
       log(
-        "no play buttons matched. Present play/audio data-icons:",
+        "no voice messages matched. Present play/audio data-icons:",
         iconNames.length ? iconNames : "(none — open a chat with a voice message)"
       )
     } else {
-      log(`matched ${buttons.length} voice message(s)`)
+      log(`matched ${bubbles.length} voice message(s)`)
     }
   }
-  return buttons.map((element) => ({
+  return bubbles.map((element) => ({
     element,
-    insertPosition: "afterend"
+    insertPosition: "beforeend"
   }))
 }
 
-// Inject the spinner keyframes into the shadow root (component styles are
-// inline, but @keyframes must live in a stylesheet).
+// The host overlays the bubble (which the widget makes position: relative), so
+// the button can be placed in the free gutter right next to it — like
+// WhatsApp's own reaction affordance. pointer-events are disabled on the
+// overlay and re-enabled on the button, so the bubble stays fully clickable.
+// Keyframes for the button spinner live here (shadow root); the portal panel
+// injects its own copy.
 export const getStyle: PlasmoGetStyle = () => {
   const style = document.createElement("style")
-  style.textContent = `@keyframes apollon-spin { to { transform: rotate(360deg); } }`
+  style.textContent = `
+    :host {
+      position: absolute;
+      inset: 0;
+      z-index: 10;
+      pointer-events: none;
+    }
+    @keyframes apollon-spin { to { transform: rotate(360deg); } }
+  `
   return style
 }
 
 export default function WhatsAppInlineWidget({ anchor }: PlasmoCSUIProps) {
-  const element = anchor?.element as HTMLElement | undefined
-  const container = element?.closest<HTMLElement>("[data-id]")
-  const dataId = container?.getAttribute("data-id")
-  if (!dataId) return null
-  return <SummarizeWidget dataId={dataId} />
+  const bubble = anchor?.element as HTMLElement | undefined
+  const row = bubble?.closest<HTMLElement>("[data-id]")
+  const dataId = row?.getAttribute("data-id")
+  if (!bubble || !row || !dataId) return null
+  return <SummarizeWidget dataId={dataId} bubble={bubble} row={row} />
 }

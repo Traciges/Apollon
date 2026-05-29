@@ -24,8 +24,17 @@ export async function transcribeAudio(filePath) {
   return transcription.text;
 }
 
-export async function summarizeText(originalText) {
+export async function summarizeText(originalText, senderName) {
   const client = getOpenAI();
+  const name = typeof senderName === "string" ? senderName.trim() : "";
+
+  const speakerInstruction = name
+    ? `The voice message was sent by "${name}". When referring to the person ` +
+      `speaking, use their name ("${name}") — never generic terms like ` +
+      `"the speaker", "der Sprecher" or "die Sprecherin". `
+    : `Refer to the person speaking naturally; avoid stiff generic terms ` +
+      `like "the speaker" / "der Sprecher" where a more natural phrasing fits. `;
+
   const completion = await client.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [
@@ -35,6 +44,7 @@ export async function summarizeText(originalText) {
           "You are an assistant that summarizes voice messages. " +
           "Create a concise, easy-to-read summary of the following transcript. " +
           "ALWAYS reply in the same language as the voice message. " +
+          speakerInstruction +
           "Use bullet points when it makes sense for the content (e.g. multiple points, tasks or topics); " +
           "for a single, short statement a brief paragraph is enough. " +
           "Output only the summary, without any introduction or meta commentary.",

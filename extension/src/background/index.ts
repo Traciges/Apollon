@@ -22,6 +22,7 @@ type Request =
       dataId: string;
       base64: string;
       mimetype: string;
+      senderName?: string;
     };
 
 type RelayResponse =
@@ -58,12 +59,14 @@ async function summarize(
   dataId: string,
   base64: string,
   mimetype: string,
+  senderName?: string,
 ): Promise<SummaryResult> {
   const blob = base64ToBlob(base64, mimetype);
   const form = new FormData();
   const ext = (mimetype.split("/")[1] || "ogg").split(";")[0];
   form.append("audio", blob, `${dataId}.${ext}`);
   form.append("messageId", dataId);
+  if (senderName) form.append("senderName", senderName);
 
   const res = await fetch(`${API_URL}/api/summarize`, {
     method: "POST",
@@ -90,7 +93,12 @@ chrome.runtime.onMessage.addListener(
         if (req.name === "apollon-summarize") {
           return {
             ok: true,
-            result: await summarize(req.dataId, req.base64, req.mimetype),
+            result: await summarize(
+              req.dataId,
+              req.base64,
+              req.mimetype,
+              req.senderName,
+            ),
           };
         }
         return { ok: false, error: `Unknown request: ${(req as any).name}` };

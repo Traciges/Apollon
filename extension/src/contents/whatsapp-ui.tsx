@@ -6,6 +6,7 @@ import type {
 } from "plasmo"
 
 import SummarizeWidget from "~features/SummarizeWidget"
+import { PLAY_CONTROL_SELECTOR, VOICE_MARKER } from "~lib/wa-selectors"
 
 export const config: PlasmoCSConfig = {
   matches: ["https://web.whatsapp.com/*"]
@@ -15,21 +16,6 @@ console.log("[Apollon] content script loaded")
 
 // Set to false to silence the diagnostic logging once the selector is verified.
 const DEBUG = true
-
-// Voice notes (PTT) carry a "ptt-status" microphone icon — this reliably marks
-// a voice message and is locale-independent. The actual play control uses
-// "media-play" (shared with video, so not usable on its own) or shows
-// "audio-download" before the media is fetched.
-//
-// VERIFY ON BUILD: open web.whatsapp.com devtools on a voice note and confirm
-// these data-icon names still match; WhatsApp renames them across versions.
-const VOICE_MARKER = 'span[data-icon="ptt-status"]'
-const PLAY_CONTROL_SELECTOR = [
-  'span[data-icon="media-play"]',
-  'span[data-icon="audio-download"]',
-  'span[data-icon="audio-play"]',
-  'span[data-icon="ptt-play"]'
-].join(",")
 
 function log(...args: unknown[]) {
   if (DEBUG) console.log("[Apollon]", ...args)

@@ -1,5 +1,5 @@
-// Isolated-world side of the bridge. Asks the MAIN-world wa-js script to
-// download + decrypt a voice note, then resolves with the decoded bytes.
+// Isolated-world side of the bridge. Asks the MAIN-world media-bridge script to
+// extract a voice note's decrypted audio, then resolves with the decoded bytes.
 
 export interface ExtractedAudio {
   base64: string
